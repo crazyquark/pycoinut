@@ -22,7 +22,8 @@ class FileLock:
         try:
             os.close(self.fd)
             os.remove(self.filename)
-            return 1
+	    self.fd = None
+	    return 1
         except OSError:
             return 0
 

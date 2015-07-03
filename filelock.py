@@ -11,10 +11,11 @@ class FileLock:
             self.fd = os.open(self.filename, os.O_CREAT|os.O_EXCL|os.O_RDWR)
             # Only needed to let readers know who's locked the file
             os.write(self.fd, "%d" % self.pid)
-            return 1    # return ints so this can be used in older Pythons
-        except OSError:
-            self.fd = None
-            return 0
+            return True
+        except OSError as e:
+            print 'Failed to acquire lock:', e.message
+	    self.fd = None
+            return False
 
     def release(self):
         if not self.fd:

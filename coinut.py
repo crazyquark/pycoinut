@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
-import urllib, json, sqlite3
+import sys, urllib, json, sqlite3
+from filelock import FileLock
 
 url = 'https://coinut.com/api/tick/BTCUSD'
 
@@ -14,6 +15,8 @@ conn.close()
 prev_price = -1
 while(True):
 	try:
+		lock = FileLock('coinut.lock')
+		
 		response = urllib.urlopen(url);
 		data = json.loads(response.read())
 	
@@ -21,18 +24,24 @@ while(True):
 		price = float(data['tick'])
 	
 		if price != prev_price:
-			conn = sqlite3.connect('coinut.db')
-			c = conn.cursor()
-
-			with conn:
-				values = (timestamp, price,)
-				c.execute("INSERT INTO ticker VALUES (?,?)", values)
+			if lock.acquire():
+				conn = sqlite3.connect('coinut.db')
+				c = conn.cursor()
+			
+				with conn:
+					values = (timestamp, price,)
+					c.execute("INSERT INTO ticker VALUES (?,?)", values)
 	
-				print values
+					print values
 
-				conn.commit()
-
+					conn.commit()
+					
+					lock.release()
+					
 			prev_price = price
+	except KeyboardInterrupt:
+		print 'Exiting...'
+		sys.exit(0)
 	except:
 		continue
 
